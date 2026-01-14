@@ -9,6 +9,7 @@ import android.view.View
 import org.fossify.calendar.R
 import org.fossify.calendar.extensions.config
 import org.fossify.calendar.extensions.isWeekendIndex
+import org.fossify.calendar.helpers.JewishCalendarHelper
 import org.fossify.calendar.models.DayYearly
 import org.fossify.commons.extensions.adjustAlpha
 import org.fossify.commons.extensions.getProperPrimaryColor
@@ -95,7 +96,9 @@ class SmallMonthView(context: Context, attrs: AttributeSet, defStyle: Int) : Vie
                     val centerY = y * dayWidth - dayWidth / 2
                     val baselineY = centerY - (fm.ascent + fm.descent) / 2
 
-                    canvas.drawText(curId.toString(), centerX, baselineY, textPaint)
+                    // Use Hebrew day number
+                    val hebrewDayNumber = JewishCalendarHelper.getHebrewDayNumber(curId)
+                    canvas.drawText(hebrewDayNumber, centerX, baselineY, textPaint)
                     if (curId == todaysId && !isPrintVersion) {
                         canvas.drawCircle(centerX, centerY, radius, todayCirclePaint)
                     }

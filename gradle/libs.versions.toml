@@ -16,6 +16,8 @@ work = "2.11.0"
 room = "2.8.4"
 #Fossify
 commons = "5.13.1"
+#KosherJava
+kosherjava = "2.5.0"
 #Gradle
 gradlePlugins-agp = "8.11.1"
 #build
@@ -39,6 +41,8 @@ androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref =
 compose-detekt = { module = "io.nlopez.compose.rules:detekt", version.ref = "detektCompose" }
 #Fossify
 fossify-commons = { module = "org.fossify:commons", version.ref = "commons" }
+#KosherJava
+kosherjava-zmanim = { module = "com.kosherjava:zmanim", version.ref = "kosherjava" }
 [bundles]
 room = [
     "androidx-room-ktx",

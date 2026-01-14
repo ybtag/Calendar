@@ -1,6 +1,7 @@
 package org.fossify.calendar.helpers
 
 import android.content.Context
+import com.kosherjava.zmanim.hebrewcalendar.JewishCalendar
 import org.fossify.calendar.extensions.eventsHelper
 import org.fossify.calendar.extensions.getProperDayIndexInWeek
 import org.fossify.calendar.extensions.isWeekendIndex
@@ -13,17 +14,31 @@ import kotlin.math.min
 
 class MonthlyCalendarImpl(val callback: MonthlyCalendar, val context: Context) {
     private val DAYS_CNT = 42
-    private val YEAR_PATTERN = "YYYY"
 
     private val mToday: String = DateTime().toString(Formatter.DAYCODE_PATTERN)
     private var mEvents = ArrayList<Event>()
 
     lateinit var mTargetDate: DateTime
 
+    // Store the target Jewish month and year for navigation
+    private var mTargetJewishYear: Int = 0
+    private var mTargetJewishMonth: Int = 0
+
     fun updateMonthlyCalendar(targetDate: DateTime) {
         mTargetDate = targetDate
-        val startTS = mTargetDate.minusDays(7).seconds()
-        val endTS = mTargetDate.plusDays(43).seconds()
+
+        // Get Jewish calendar for target date
+        val jewishCalendar = JewishCalendarHelper.getJewishCalendar(targetDate)
+        mTargetJewishYear = jewishCalendar.jewishYear
+        mTargetJewishMonth = jewishCalendar.jewishMonth
+
+        // Calculate the Gregorian date range for the Jewish month
+        val firstDayOfJewishMonth = JewishCalendarHelper.getFirstDayOfJewishMonth(mTargetJewishYear, mTargetJewishMonth)
+        val daysInMonth = JewishCalendarHelper.getDaysInJewishMonth(JewishCalendar(mTargetJewishYear, mTargetJewishMonth, 1))
+        val lastDayOfJewishMonth = JewishCalendarHelper.getDateTimeForJewishDate(mTargetJewishYear, mTargetJewishMonth, daysInMonth)
+
+        val startTS = firstDayOfJewishMonth.minusDays(7).seconds()
+        val endTS = lastDayOfJewishMonth.plusDays(14).seconds()
         context.eventsHelper.getEvents(startTS, endTS) {
             gotEvents(it)
         }
@@ -35,44 +50,64 @@ class MonthlyCalendarImpl(val callback: MonthlyCalendar, val context: Context) {
 
     fun getDays(markDaysWithEvents: Boolean) {
         val days = ArrayList<DayMonthly>(DAYS_CNT)
-        val firstDayOfMonth = mTargetDate.withDayOfMonth(1)
-        val firstDayIndex = context.getProperDayIndexInWeek(firstDayOfMonth)
 
-        val currMonthDays = mTargetDate.dayOfMonth().maximumValue
-        val prevMonthDays = mTargetDate.minusMonths(1).dayOfMonth().maximumValue
+        // Get the first day of the Jewish month in Gregorian
+        val firstDayOfJewishMonth = JewishCalendarHelper.getFirstDayOfJewishMonth(mTargetJewishYear, mTargetJewishMonth)
+        val firstDayIndex = context.getProperDayIndexInWeek(firstDayOfJewishMonth)
+
+        // Get days in current and previous Jewish month
+        val currMonthDays = JewishCalendarHelper.getDaysInJewishMonth(JewishCalendar(mTargetJewishYear, mTargetJewishMonth, 1))
+        val (prevYear, prevMonth) = JewishCalendarHelper.getPreviousJewishMonth(mTargetJewishYear, mTargetJewishMonth)
+        val prevMonthDays = JewishCalendarHelper.getDaysInJewishMonth(JewishCalendar(prevYear, prevMonth, 1))
 
         var isThisMonth = false
         var isToday: Boolean
-        var value = prevMonthDays - firstDayIndex + 1
-        var curDay = mTargetDate
+        var jewishDay = prevMonthDays - firstDayIndex + 1
+        var currentJewishYear = prevYear
+        var currentJewishMonth = prevMonth
 
         for (i in 0 until DAYS_CNT) {
             when {
                 i < firstDayIndex -> {
                     isThisMonth = false
-                    curDay = mTargetDate.withDayOfMonth(1).minusMonths(1)
+                    currentJewishYear = prevYear
+                    currentJewishMonth = prevMonth
                 }
 
                 i == firstDayIndex -> {
-                    value = 1
+                    jewishDay = 1
                     isThisMonth = true
-                    curDay = mTargetDate
+                    currentJewishYear = mTargetJewishYear
+                    currentJewishMonth = mTargetJewishMonth
                 }
 
-                value == currMonthDays + 1 -> {
-                    value = 1
+                jewishDay > currMonthDays && isThisMonth -> {
+                    jewishDay = 1
                     isThisMonth = false
-                    curDay = mTargetDate.withDayOfMonth(1).plusMonths(1)
+                    val (nextYear, nextMonth) = JewishCalendarHelper.getNextJewishMonth(mTargetJewishYear, mTargetJewishMonth)
+                    currentJewishYear = nextYear
+                    currentJewishMonth = nextMonth
                 }
             }
 
-            isToday = isToday(curDay, value)
+            // Get the Gregorian DateTime for this Jewish date
+            val gregorianDate = JewishCalendarHelper.getDateTimeForJewishDate(currentJewishYear, currentJewishMonth, jewishDay)
+            val dayCode = Formatter.getDayCodeFromDateTime(gregorianDate)
 
-            val newDay = curDay.withDayOfMonth(value)
-            val dayCode = Formatter.getDayCodeFromDateTime(newDay)
-            val day = DayMonthly(value, isThisMonth, isToday, dayCode, newDay.weekOfWeekyear, ArrayList(), i, context.isWeekendIndex(i))
+            isToday = dayCode == mToday
+
+            val day = DayMonthly(
+                jewishDay,
+                isThisMonth,
+                isToday,
+                dayCode,
+                gregorianDate.weekOfWeekyear,
+                ArrayList(),
+                i,
+                context.isWeekendIndex(i)
+            )
             days.add(day)
-            value++
+            jewishDay++
         }
 
         if (markDaysWithEvents) {
@@ -111,17 +146,13 @@ class MonthlyCalendarImpl(val callback: MonthlyCalendar, val context: Context) {
         callback.updateMonthlyCalendar(context, monthName, days, true, mTargetDate)
     }
 
-    private fun isToday(targetDate: DateTime, curDayInMonth: Int): Boolean {
-        val targetMonthDays = targetDate.dayOfMonth().maximumValue
-        return targetDate.withDayOfMonth(min(curDayInMonth, targetMonthDays)).toString(Formatter.DAYCODE_PATTERN) == mToday
-    }
-
     private val monthName: String
         get() {
-            var month = Formatter.getMonthName(context, mTargetDate.monthOfYear)
-            val targetYear = mTargetDate.toString(YEAR_PATTERN)
-            if (targetYear != DateTime().toString(YEAR_PATTERN)) {
-                month += " $targetYear"
+            val jewishCalendar = JewishCalendar(mTargetJewishYear, mTargetJewishMonth, 1)
+            var month = JewishCalendarHelper.getHebrewMonthName(jewishCalendar)
+            val currentJewishCalendar = JewishCalendarHelper.getJewishCalendar(DateTime())
+            if (mTargetJewishYear != currentJewishCalendar.jewishYear) {
+                month += " ${JewishCalendarHelper.getHebrewYear(jewishCalendar)}"
             }
             return month
         }

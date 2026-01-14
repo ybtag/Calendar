@@ -24,16 +24,14 @@ object Formatter {
 
     fun getDateFromCode(context: Context, dayCode: String, shortMonth: Boolean = false): String {
         val dateTime = getDateTimeFromCode(dayCode)
-        val day = dateTime.toString(DAY_PATTERN)
-        val year = dateTime.toString(YEAR_PATTERN)
-        val monthIndex = Integer.valueOf(dayCode.substring(4, 6))
-        var month = getMonthName(context, monthIndex)
-        if (shortMonth) {
-            month = month.substring(0, Math.min(month.length, 3))
-        }
+        val jewishCalendar = JewishCalendarHelper.getJewishCalendar(dateTime)
+        val day = JewishCalendarHelper.getHebrewDayNumber(jewishCalendar.jewishDayOfMonth)
+        val month = JewishCalendarHelper.getHebrewMonthName(jewishCalendar)
+        val year = JewishCalendarHelper.getHebrewYear(jewishCalendar)
 
-        var date = "$month $day"
-        if (year != DateTime().toString(YEAR_PATTERN)) {
+        val currentJewishCalendar = JewishCalendarHelper.getJewishCalendar(DateTime())
+        var date = "$day $month"
+        if (jewishCalendar.jewishYear != currentJewishCalendar.jewishYear) {
             date += " $year"
         }
 
@@ -43,7 +41,10 @@ object Formatter {
     fun getDayTitle(context: Context, dayCode: String, addDayOfWeek: Boolean = true): String {
         val date = getDateFromCode(context, dayCode)
         val dateTime = getDateTimeFromCode(dayCode)
-        val day = dateTime.toString(DAY_OF_WEEK_PATTERN)
+        val hebrewWeekDays = JewishCalendarHelper.getHebrewWeekDayNames()
+        // DateTime uses 1=Monday, 7=Sunday, but we need 0=Sunday, 6=Saturday
+        val dayOfWeekIndex = if (dateTime.dayOfWeek == 7) 0 else dateTime.dayOfWeek
+        val day = hebrewWeekDays[dayOfWeekIndex]
         return if (addDayOfWeek)
             "$date ($day)"
         else
@@ -52,17 +53,24 @@ object Formatter {
 
     fun getDateDayTitle(dayCode: String): String {
         val dateTime = getDateTimeFromCode(dayCode)
-        return dateTime.toString(DATE_DAY_PATTERN)
+        val jewishCalendar = JewishCalendarHelper.getJewishCalendar(dateTime)
+        val day = JewishCalendarHelper.getHebrewDayNumber(jewishCalendar.jewishDayOfMonth)
+        val hebrewWeekDays = JewishCalendarHelper.getHebrewWeekDayNames()
+        val dayOfWeekIndex = if (dateTime.dayOfWeek == 7) 0 else dateTime.dayOfWeek
+        val dayOfWeek = hebrewWeekDays[dayOfWeekIndex]
+        return "$day $dayOfWeek"
     }
 
     fun getLongMonthYear(context: Context, dayCode: String): String {
         val dateTime = getDateTimeFromCode(dayCode)
-        val monthIndex = Integer.valueOf(dayCode.substring(4, 6))
-        val month = getMonthName(context, monthIndex)
-        val year = dateTime.toString(YEAR_PATTERN)
+        val jewishCalendar = JewishCalendarHelper.getJewishCalendar(dateTime)
+        val month = JewishCalendarHelper.getHebrewMonthName(jewishCalendar)
+        val year = JewishCalendarHelper.getHebrewYear(jewishCalendar)
+
+        val currentJewishCalendar = JewishCalendarHelper.getJewishCalendar(DateTime())
         var date = month
 
-        if (year != DateTime().toString(YEAR_PATTERN)) {
+        if (jewishCalendar.jewishYear != currentJewishCalendar.jewishYear) {
             date += " $year"
         }
 
@@ -72,18 +80,21 @@ object Formatter {
     fun getDate(context: Context, dateTime: DateTime, addDayOfWeek: Boolean = true) = getDayTitle(context, getDayCodeFromDateTime(dateTime), addDayOfWeek)
 
     fun getFullDate(context: Context, dateTime: DateTime): String {
-        val day = dateTime.toString(DAY_PATTERN)
-        val year = dateTime.toString(YEAR_PATTERN)
-        val monthIndex = dateTime.monthOfYear
-        val month = getMonthName(context, monthIndex)
-        return "$month $day $year"
+        val jewishCalendar = JewishCalendarHelper.getJewishCalendar(dateTime)
+        return JewishCalendarHelper.formatFullHebrewDate(jewishCalendar)
     }
 
     fun getTodayCode() = getDayCodeFromTS(getNowSeconds())
 
-    fun getTodayDayNumber() = getDateTimeFromTS(getNowSeconds()).toString(DAY_PATTERN)
+    fun getTodayDayNumber(): String {
+        val jewishCalendar = JewishCalendarHelper.getJewishCalendarFromTS(getNowSeconds())
+        return JewishCalendarHelper.getHebrewDayNumber(jewishCalendar.jewishDayOfMonth)
+    }
 
-    fun getCurrentMonthShort() = getDateTimeFromTS(getNowSeconds()).toString(MONTH_PATTERN)
+    fun getCurrentMonthShort(): String {
+        val jewishCalendar = JewishCalendarHelper.getJewishCalendarFromTS(getNowSeconds())
+        return JewishCalendarHelper.getHebrewMonthName(jewishCalendar)
+    }
 
     fun getTime(context: Context, dateTime: DateTime) = dateTime.toString(getTimePattern(context))
 
@@ -106,10 +117,36 @@ object Formatter {
 
     fun getUTCDateTimeFromTS(ts: Long) = DateTime(ts * 1000L, DateTimeZone.UTC)
 
-    // use manually translated month names, as DateFormat and Joda have issues with a lot of languages
-    fun getMonthName(context: Context, id: Int) = context.resources.getStringArray(org.fossify.commons.R.array.months)[id - 1]
+    // Hebrew month names for Jewish calendar
+    private val HEBREW_MONTH_NAMES = arrayOf(
+        "\u05E0\u05D9\u05E1\u05DF",      // Nissan (1)
+        "\u05D0\u05D9\u05D9\u05E8",      // Iyar (2)
+        "\u05E1\u05D9\u05D5\u05DF",      // Sivan (3)
+        "\u05EA\u05DE\u05D5\u05D6",      // Tammuz (4)
+        "\u05D0\u05D1",                  // Av (5)
+        "\u05D0\u05DC\u05D5\u05DC",      // Elul (6)
+        "\u05EA\u05E9\u05E8\u05D9",      // Tishrei (7)
+        "\u05D7\u05E9\u05D5\u05DF",      // Cheshvan (8)
+        "\u05DB\u05E1\u05DC\u05D5",      // Kislev (9)
+        "\u05D8\u05D1\u05EA",            // Tevet (10)
+        "\u05E9\u05D1\u05D8",            // Shevat (11)
+        "\u05D0\u05D3\u05E8",            // Adar (12) or Adar I in leap year
+        "\u05D0\u05D3\u05E8 \u05D1"      // Adar II (13, leap year only)
+    )
 
-    fun getShortMonthName(context: Context, id: Int) = context.resources.getStringArray(org.fossify.commons.R.array.months_short)[id - 1]
+    fun getMonthName(context: Context, id: Int): String {
+        // id is the Jewish month number (1=Nissan, 7=Tishrei, etc.)
+        return if (id in 1..13) {
+            HEBREW_MONTH_NAMES[id - 1]
+        } else {
+            HEBREW_MONTH_NAMES[0]
+        }
+    }
+
+    fun getShortMonthName(context: Context, id: Int): String {
+        // Same as full name for Hebrew
+        return getMonthName(context, id)
+    }
 
     fun getHourPattern(context: Context) = if (context.config.use24HourFormat) PATTERN_HOURS_24 else PATTERN_HOURS_12
 

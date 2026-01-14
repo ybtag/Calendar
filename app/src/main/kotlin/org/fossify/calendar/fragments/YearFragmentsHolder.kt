@@ -12,6 +12,7 @@ import org.fossify.calendar.activities.MainActivity
 import org.fossify.calendar.adapters.MyYearPagerAdapter
 import org.fossify.calendar.databinding.FragmentYearsHolderBinding
 import org.fossify.calendar.helpers.Formatter
+import org.fossify.calendar.helpers.JewishCalendarHelper
 import org.fossify.calendar.helpers.YEARLY_VIEW
 import org.fossify.calendar.helpers.YEAR_TO_OPEN
 import org.fossify.calendar.interfaces.NavigationListener
@@ -36,8 +37,11 @@ class YearFragmentsHolder : MyFragmentHolder(), NavigationListener {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val dateTimeString = arguments?.getString(YEAR_TO_OPEN)
-        currentYear = (if (dateTimeString != null) DateTime.parse(dateTimeString) else DateTime()).toString(Formatter.YEAR_PATTERN).toInt()
-        todayYear = DateTime().toString(Formatter.YEAR_PATTERN).toInt()
+        val dateTime = if (dateTimeString != null) DateTime.parse(dateTimeString) else DateTime()
+        // Use Jewish year instead of Gregorian
+        val jewishCalendar = JewishCalendarHelper.getJewishCalendar(dateTime)
+        currentYear = jewishCalendar.jewishYear
+        todayYear = JewishCalendarHelper.getJewishCalendar(DateTime()).jewishYear
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {

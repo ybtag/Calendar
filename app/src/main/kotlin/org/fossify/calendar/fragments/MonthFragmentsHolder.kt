@@ -14,6 +14,7 @@ import org.fossify.calendar.databinding.FragmentMonthsHolderBinding
 import org.fossify.calendar.extensions.getMonthCode
 import org.fossify.calendar.helpers.DAY_CODE
 import org.fossify.calendar.helpers.Formatter
+import org.fossify.calendar.helpers.JewishCalendarHelper
 import org.fossify.calendar.helpers.MONTHLY_VIEW
 import org.fossify.calendar.interfaces.NavigationListener
 import org.fossify.commons.extensions.beGone
@@ -78,9 +79,28 @@ class MonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
 
     private fun getMonths(code: String): List<String> {
         val months = ArrayList<String>(PREFILLED_MONTHS)
-        val today = Formatter.getDateTimeFromCode(code).withDayOfMonth(1)
-        for (i in -PREFILLED_MONTHS / 2..PREFILLED_MONTHS / 2) {
-            months.add(Formatter.getDayCodeFromDateTime(today.plusMonths(i)))
+        val today = Formatter.getDateTimeFromCode(code)
+
+        // Get the Jewish calendar for the current date
+        val jewishCalendar = JewishCalendarHelper.getJewishCalendar(today)
+        var currentJewishYear = jewishCalendar.jewishYear
+        var currentJewishMonth = jewishCalendar.jewishMonth
+
+        // Go back PREFILLED_MONTHS/2 Jewish months
+        for (i in 0 until PREFILLED_MONTHS / 2) {
+            val (prevYear, prevMonth) = JewishCalendarHelper.getPreviousJewishMonth(currentJewishYear, currentJewishMonth)
+            currentJewishYear = prevYear
+            currentJewishMonth = prevMonth
+        }
+
+        // Now add PREFILLED_MONTHS Jewish months
+        for (i in 0 until PREFILLED_MONTHS) {
+            val firstDayOfMonth = JewishCalendarHelper.getFirstDayOfJewishMonth(currentJewishYear, currentJewishMonth)
+            months.add(Formatter.getDayCodeFromDateTime(firstDayOfMonth))
+
+            val (nextYear, nextMonth) = JewishCalendarHelper.getNextJewishMonth(currentJewishYear, currentJewishMonth)
+            currentJewishYear = nextYear
+            currentJewishMonth = nextMonth
         }
 
         return months

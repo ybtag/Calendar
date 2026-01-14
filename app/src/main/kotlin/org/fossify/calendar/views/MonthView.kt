@@ -11,6 +11,7 @@ import org.fossify.calendar.R
 import org.fossify.calendar.extensions.*
 import org.fossify.calendar.helpers.COLUMN_COUNT
 import org.fossify.calendar.helpers.Formatter
+import org.fossify.calendar.helpers.JewishCalendarHelper
 import org.fossify.calendar.helpers.ROW_COUNT
 import org.fossify.calendar.models.DayMonthly
 import org.fossify.calendar.models.Event
@@ -188,7 +189,7 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
             for (x in 0 until COLUMN_COUNT) {
                 val day = days.getOrNull(curId)
                 if (day != null) {
-                    val dayNumber = day.value.toString()
+                    val dayNumber = JewishCalendarHelper.getHebrewDayNumber(day.value)
                     val textPaint = getTextPaint(day)
                     textPaint.getTextBounds(dayNumber, 0, dayNumber.length, dayTextRect)
                     dayVerticalOffsets.put(day.indexOnMonthView, dayVerticalOffsets[day.indexOnMonthView] + weekDaysLetterHeight)
@@ -449,8 +450,9 @@ class MonthView(context: Context, attrs: AttributeSet, defStyle: Int) : View(con
     }
 
     private fun initWeekDayLetters() {
+        // Use Hebrew weekday letters
         dayLetters = context.withFirstDayOfWeekToFront(
-            context.resources.getStringArray(org.fossify.commons.R.array.week_days_short).toList()
+            JewishCalendarHelper.getHebrewWeekDayNamesShort().toList()
         )
     }
 

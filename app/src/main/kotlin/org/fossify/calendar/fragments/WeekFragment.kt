@@ -41,6 +41,7 @@ import org.fossify.calendar.extensions.intersects
 import org.fossify.calendar.extensions.seconds
 import org.fossify.calendar.extensions.shouldStrikeThrough
 import org.fossify.calendar.helpers.Config
+import org.fossify.calendar.helpers.JewishCalendarHelper
 import org.fossify.calendar.helpers.EDIT_ALL_OCCURRENCES
 import org.fossify.calendar.helpers.EDIT_FUTURE_OCCURRENCES
 import org.fossify.calendar.helpers.EDIT_SELECTED_OCCURRENCE
@@ -277,17 +278,23 @@ class WeekFragment : Fragment(), WeeklyCalendar {
         val dayWidth = screenWidth / config.weeklyViewDays
         val useLongerDayLabels = dayWidth > res.getDimension(R.dimen.weekly_view_min_day_label)
 
+        // Use Hebrew weekday names
+        val hebrewWeekDayNames = if (useLongerDayLabels) {
+            JewishCalendarHelper.getHebrewWeekDayNames()
+        } else {
+            JewishCalendarHelper.getHebrewWeekDayNamesShort()
+        }
+
         binding.weekLettersHolder.removeAllViews()
         for (i in 0 until config.weeklyViewDays) {
             val dayCode = Formatter.getDayCodeFromDateTime(curDay)
-            val labelIDs = if (useLongerDayLabels) {
-                org.fossify.commons.R.array.week_days_short
-            } else {
-                org.fossify.commons.R.array.week_day_letters
-            }
+            // Get Hebrew weekday name (Sunday=0, Monday=1, ..., Saturday=6)
+            val dayOfWeekIndex = if (curDay.dayOfWeek == 7) 0 else curDay.dayOfWeek
+            val dayLetter = hebrewWeekDayNames[dayOfWeekIndex]
 
-            val dayLetters = res.getStringArray(labelIDs).toMutableList() as ArrayList<String>
-            val dayLetter = dayLetters[curDay.dayOfWeek - 1]
+            // Get Jewish day number in Hebrew
+            val jewishCalendar = JewishCalendarHelper.getJewishCalendar(curDay)
+            val hebrewDayNumber = JewishCalendarHelper.getHebrewDayNumber(jewishCalendar.jewishDayOfMonth)
 
             val textColor = when {
                 !isPrintVersion && todayCode == dayCode -> primaryColor
@@ -301,7 +308,7 @@ class WeekFragment : Fragment(), WeeklyCalendar {
                 binding.weekLettersHolder,
                 false
             ).root
-            label.text = "$dayLetter\n${curDay.dayOfMonth}"
+            label.text = "$dayLetter\n$hebrewDayNumber"
             label.setTextColor(textColor)
             if (todayCode == dayCode) {
                 todayColumnIndex = i

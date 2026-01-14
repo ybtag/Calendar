@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import com.kosherjava.zmanim.hebrewcalendar.JewishCalendar
 import org.fossify.calendar.activities.MainActivity
 import org.fossify.calendar.databinding.FragmentYearBinding
 import org.fossify.calendar.databinding.SmallMonthViewHolderBinding
@@ -14,19 +15,22 @@ import org.fossify.calendar.extensions.config
 import org.fossify.calendar.extensions.getProperDayIndexInWeek
 import org.fossify.calendar.extensions.getViewBitmap
 import org.fossify.calendar.extensions.printBitmap
+import org.fossify.calendar.helpers.JewishCalendarHelper
 import org.fossify.calendar.helpers.YEAR_LABEL
 import org.fossify.calendar.helpers.YearlyCalendarImpl
 import org.fossify.calendar.interfaces.NavigationListener
 import org.fossify.calendar.interfaces.YearlyCalendar
 import org.fossify.calendar.models.DayYearly
 import org.fossify.commons.extensions.applyColorFilter
+import org.fossify.commons.extensions.beGone
+import org.fossify.commons.extensions.beVisible
 import org.fossify.commons.extensions.getProperPrimaryColor
 import org.fossify.commons.extensions.getProperTextColor
 import org.fossify.commons.extensions.updateTextColors
 import org.joda.time.DateTime
 
 class YearFragment : Fragment(), YearlyCalendar {
-    private var mYear = 0
+    private var mYear = 0  // This is the Jewish year
     private var mFirstDayOfWeek = 0
     private var isPrintVersion = false
     private var lastHash = 0
@@ -38,19 +42,39 @@ class YearFragment : Fragment(), YearlyCalendar {
     private lateinit var topNavigationBinding: TopNavigationBinding
     private lateinit var monthHolders: List<SmallMonthViewHolderBinding>
 
-    private val monthResIds = arrayOf(
-        org.fossify.commons.R.string.january,
-        org.fossify.commons.R.string.february,
-        org.fossify.commons.R.string.march,
-        org.fossify.commons.R.string.april,
-        org.fossify.commons.R.string.may,
-        org.fossify.commons.R.string.june,
-        org.fossify.commons.R.string.july,
-        org.fossify.commons.R.string.august,
-        org.fossify.commons.R.string.september,
-        org.fossify.commons.R.string.october,
-        org.fossify.commons.R.string.november,
-        org.fossify.commons.R.string.december
+    // Hebrew month names in Jewish calendar order (Tishrei first)
+    // Tishrei=7, Cheshvan=8, Kislev=9, Tevet=10, Shevat=11, Adar=12, Nissan=1, Iyar=2, Sivan=3, Tammuz=4, Av=5, Elul=6
+    private val hebrewMonthNames = arrayOf(
+        "\u05EA\u05E9\u05E8\u05D9",      // Tishrei
+        "\u05D7\u05E9\u05D5\u05DF",      // Cheshvan
+        "\u05DB\u05E1\u05DC\u05D5",      // Kislev
+        "\u05D8\u05D1\u05EA",            // Tevet
+        "\u05E9\u05D1\u05D8",            // Shevat
+        "\u05D0\u05D3\u05E8",            // Adar (or Adar I in leap year)
+        "\u05D0\u05D3\u05E8 \u05D1",     // Adar II (leap year only)
+        "\u05E0\u05D9\u05E1\u05DF",      // Nissan
+        "\u05D0\u05D9\u05D9\u05E8",      // Iyar
+        "\u05E1\u05D9\u05D5\u05DF",      // Sivan
+        "\u05EA\u05DE\u05D5\u05D6",      // Tammuz
+        "\u05D0\u05D1",                  // Av
+        "\u05D0\u05DC\u05D5\u05DC"       // Elul
+    )
+
+    // Jewish month numbers in display order (starting from Tishrei)
+    private val jewishMonthOrder = arrayOf(
+        JewishCalendar.TISHREI,  // 7
+        JewishCalendar.CHESHVAN, // 8
+        JewishCalendar.KISLEV,   // 9
+        JewishCalendar.TEVES,    // 10
+        JewishCalendar.SHEVAT,   // 11
+        JewishCalendar.ADAR,     // 12
+        JewishCalendar.ADAR_II,  // 13 (leap year only)
+        JewishCalendar.NISSAN,   // 1
+        JewishCalendar.IYAR,     // 2
+        JewishCalendar.SIVAN,    // 3
+        JewishCalendar.TAMMUZ,   // 4
+        JewishCalendar.AV,       // 5
+        JewishCalendar.ELUL      // 6
     )
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
@@ -59,13 +83,9 @@ class YearFragment : Fragment(), YearlyCalendar {
         monthHolders = arrayListOf(
             binding.month1Holder, binding.month2Holder, binding.month3Holder, binding.month4Holder, binding.month5Holder, binding.month6Holder,
             binding.month7Holder, binding.month8Holder, binding.month9Holder, binding.month10Holder, binding.month11Holder, binding.month12Holder
-        ).apply {
-            forEachIndexed { index, it ->
-                it.monthLabel.text = getString(monthResIds[index])
-            }
-        }
+        )
 
-        mYear = requireArguments().getInt(YEAR_LABEL)
+        mYear = requireArguments().getInt(YEAR_LABEL)  // This is the Jewish year
         requireContext().updateTextColors(binding.calendarWrapper)
         setupMonths()
         setupButtons()
@@ -94,28 +114,54 @@ class YearFragment : Fragment(), YearlyCalendar {
     }
 
     private fun setupMonths() {
-        val dateTime = DateTime().withYear(mYear).withHourOfDay(12)
-        monthHolders.forEachIndexed { index, monthHolder ->
-            val monthOfYear = index + 1
-            val monthView = monthHolder.smallMonthView
-            val curTextColor = when {
-                isPrintVersion -> resources.getColor(org.fossify.commons.R.color.theme_light_text_color)
-                else -> requireContext().getProperTextColor()
-            }
+        val isLeapYear = JewishCalendarHelper.isLeapYear(mYear)
 
-            monthHolder.monthLabel.setTextColor(curTextColor)
-            val firstDayOfMonth = dateTime.withMonthOfYear(monthOfYear).withDayOfMonth(1)
-            monthView.firstDay = requireContext().getProperDayIndexInWeek(firstDayOfMonth)
-            val numberOfDays = dateTime.withMonthOfYear(monthOfYear).dayOfMonth().maximumValue
-            monthView.setDays(numberOfDays)
-            monthView.setOnClickListener {
-                (activity as MainActivity).openMonthFromYearly(DateTime().withDate(mYear, monthOfYear, 1))
+        // Get the month indices to display (skip Adar II in non-leap years)
+        val monthsToDisplay = if (isLeapYear) {
+            // In leap year, show all 13 months but layout only has 12 slots
+            // Show Tishrei through Adar I (6 months), then Adar II through Elul (7 months) = 13 months
+            // For now, we'll show 12 months (Tishrei to Elul, with Adar I/II combined display)
+            listOf(0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12) // Skip Adar II (index 6) for layout constraints
+        } else {
+            // Non-leap year: show 12 months
+            listOf(0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12) // Skip Adar II (index 6)
+        }
+
+        monthHolders.forEachIndexed { index, monthHolder ->
+            if (index < monthsToDisplay.size) {
+                monthHolder.root.beVisible()
+                val monthNameIndex = monthsToDisplay[index]
+                val jewishMonth = jewishMonthOrder[monthNameIndex]
+
+                val monthView = monthHolder.smallMonthView
+                val curTextColor = when {
+                    isPrintVersion -> resources.getColor(org.fossify.commons.R.color.theme_light_text_color)
+                    else -> requireContext().getProperTextColor()
+                }
+
+                // Set Hebrew month name
+                monthHolder.monthLabel.text = hebrewMonthNames[monthNameIndex]
+                monthHolder.monthLabel.setTextColor(curTextColor)
+
+                // Get the first day of this Jewish month
+                val firstDayOfJewishMonth = JewishCalendarHelper.getFirstDayOfJewishMonth(mYear, jewishMonth)
+                monthView.firstDay = requireContext().getProperDayIndexInWeek(firstDayOfJewishMonth)
+
+                // Get number of days in this Jewish month
+                val numberOfDays = JewishCalendarHelper.getDaysInJewishMonth(JewishCalendar(mYear, jewishMonth, 1))
+                monthView.setDays(numberOfDays)
+
+                monthView.setOnClickListener {
+                    // Open the first day of this Jewish month
+                    (activity as MainActivity).openMonthFromYearly(firstDayOfJewishMonth)
+                }
+            } else {
+                monthHolder.root.beGone()
             }
         }
 
         if (!isPrintVersion) {
-            val now = DateTime()
-            markCurrentMonth(now)
+            markCurrentMonth()
         }
     }
 
@@ -153,12 +199,27 @@ class YearFragment : Fragment(), YearlyCalendar {
         }
     }
 
-    private fun markCurrentMonth(now: DateTime) {
-        if (now.year == mYear) {
-            val monthOfYear = now.monthOfYear
-            val monthHolder = monthHolders[monthOfYear - 1]
-            monthHolder.monthLabel.setTextColor(requireContext().getProperPrimaryColor())
-            monthHolder.smallMonthView.todaysId = now.dayOfMonth
+    private fun markCurrentMonth() {
+        val now = DateTime()
+        val todayJewish = JewishCalendarHelper.getJewishCalendar(now)
+
+        if (todayJewish.jewishYear == mYear) {
+            val currentJewishMonth = todayJewish.jewishMonth
+            val isLeapYear = JewishCalendarHelper.isLeapYear(mYear)
+
+            // Find the index of the current month in our display order
+            val monthsToDisplay = if (isLeapYear) {
+                listOf(0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12)
+            } else {
+                listOf(0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12)
+            }
+
+            val displayIndex = monthsToDisplay.indexOfFirst { jewishMonthOrder[it] == currentJewishMonth }
+            if (displayIndex >= 0 && displayIndex < monthHolders.size) {
+                val monthHolder = monthHolders[displayIndex]
+                monthHolder.monthLabel.setTextColor(requireContext().getProperPrimaryColor())
+                monthHolder.smallMonthView.todaysId = todayJewish.jewishDayOfMonth
+            }
         }
     }
 
@@ -172,14 +233,25 @@ class YearFragment : Fragment(), YearlyCalendar {
         }
 
         lastHash = hashCode
+        val isLeapYear = JewishCalendarHelper.isLeapYear(mYear)
+        val monthsToDisplay = if (isLeapYear) {
+            listOf(0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12)
+        } else {
+            listOf(0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12)
+        }
+
         monthHolders.forEachIndexed { index, monthHolder ->
-            val monthView = monthHolder.smallMonthView
-            val monthOfYear = index + 1
-            monthView.setEvents(events.get(monthOfYear))
+            if (index < monthsToDisplay.size) {
+                val monthView = monthHolder.smallMonthView
+                val jewishMonth = jewishMonthOrder[monthsToDisplay[index]]
+                monthView.setEvents(events.get(jewishMonth))
+            }
         }
 
         topNavigationBinding.topValue.post {
-            topNavigationBinding.topValue.text = mYear.toString()
+            // Display Hebrew year
+            val jewishCalendar = JewishCalendar(mYear, JewishCalendar.TISHREI, 1)
+            topNavigationBinding.topValue.text = JewishCalendarHelper.getHebrewYear(jewishCalendar)
         }
     }
 
