@@ -3,4 +3,9 @@
 
 An Open Source Jewish Calendar app for Android
 
-This app is based on https://github.com/FossifyOrg/Calendar. Thank you for that great app as a solid base for this.
+This app is based on https://github.com/FossifyOrg/Calendar.
+If you would like to show your appreciation, please sponsor Fossify at https://github.com/naveensingh
+
+Much thanks to Eliyahu Hershfeld for [KosherJava](https://github.com/KosherJava/zmanim)
+
+Credit to Claude Code for its help 😉
