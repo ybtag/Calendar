@@ -230,6 +230,20 @@
     <string name="allow_changing_time_zones">Allow changing event time zones</string>
     <string name="manage_quick_filter_event_types">Manage quick filter calendars</string>
     <string name="allow_creating_tasks">Allow creating tasks</string>
+    <string name="softkey_guide_title">Softkey guide</string>
+    <string name="softkey_guide_description">Show Kyocera softkey guide on supported devices</string>
+    <string name="softkey_menu">Menu</string>
+    <string name="softkey_prev">Prev</string>
+    <string name="softkey_next">Next</string>
+    <string name="softkey_back">Back</string>
+    <string name="softkey_save">Save</string>
+    <string name="softkey_cancel">Cancel</string>
+    <string name="softkey_select">Select</string>
+
+    <!-- Jewish Calendar -->
+    <string name="jewish_calendar">לוח עברי</string>
+    <string name="in_israel">בארץ ישראל</string>
+    <string name="show_jewish_holidays">הצג חגים ומועדים</string>
 
     <!-- CalDAV sync -->
     <string name="caldav">CalDAV</string>
