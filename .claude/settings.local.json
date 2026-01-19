@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(xcopy /E /I /Y \"app\\\\src\\\\main\\\\kotlin\\\\org\\\\fossify\\\\calendar\\\\*\" \"app\\\\src\\\\main\\\\kotlin\\\\com\\\\kosherphone\\\\jewishcalendar\"\")",
+      "Bash(find:*)",
+      "Bash(./gradlew assembleDebug:*)",
+      "Bash(./gradlew:*)",
+      "Bash(./gradlew assembleFossDebug:*)"
+    ]
+  }
+}

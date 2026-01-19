@@ -1,0 +1,9 @@
+package com.kosherphone.jewishcalendar.models
+
+data class HolidayInfo(
+    val code: String,
+    val country: String,
+    val public: String,
+    val regional: String? = null,
+    val other: String? = null,
+)
