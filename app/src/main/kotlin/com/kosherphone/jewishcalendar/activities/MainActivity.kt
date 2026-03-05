@@ -300,21 +300,64 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         if (config.caldavSync) {
             updateCalDAVEvents()
         }
+
+        window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener(toolbarFocusListener)
     }
 
-    // D-pad / softkey behavior for MainActivity
+    // ---- Toolbar focus / softkey label updates ----
+
+    private fun isInsideToolbar(view: android.view.View): Boolean {
+        var current: android.view.ViewParent? = view.parent
+        while (current != null) {
+            if (current == binding.mainMenu) return true
+            current = current.parent
+        }
+        return false
+    }
+
+    private fun softkeyLabelForView(view: android.view.View): String = when (view.id) {
+        org.fossify.commons.R.id.top_toolbar_search_icon -> getString(R.string.softkey_search)
+        R.id.go_to_today  -> getString(R.string.softkey_today)
+        R.id.change_view  -> getString(R.string.softkey_view)
+        R.id.go_to_date   -> getString(R.string.softkey_date)
+        R.id.settings     -> getString(R.string.softkey_settings)
+        R.id.filter       -> getString(R.string.softkey_filter)
+        else -> {
+            val desc = view.contentDescription?.toString()?.trim() ?: ""
+            if (desc.isNotEmpty()) desc.split(" ").take(2).joinToString(" ")
+            else getString(R.string.softkey_select)
+        }
+    }
+
+    private fun updateSoftkeysForFocus(focus: android.view.View?) {
+        if (focus != null && isInsideToolbar(focus)) {
+            updateSoftkeyLabels(softkeyLabelForView(focus), getString(R.string.softkey_back))
+        } else {
+            updateSoftkeyLabels(getString(R.string.softkey_prev), getString(R.string.softkey_next))
+        }
+    }
+
+    private val toolbarFocusListener = android.view.ViewTreeObserver.OnGlobalFocusChangeListener { _, newFocus ->
+        val inToolbar = newFocus != null && isInsideToolbar(newFocus)
+        android.util.Log.d("SoftkeyTest", "FocusChanged: ${newFocus?.javaClass?.simpleName} id=0x${newFocus?.id?.toString(16)} inToolbar=$inToolbar")
+        updateSoftkeysForFocus(newFocus)
+    }
+
+    // ---- D-pad / softkey behavior for MainActivity ----
+
     override fun configureSoftkeyGuide(guide: com.kosherphone.jewishcalendar.quirks.kyocera.KYY31SoftkeyGuide) {
         try {
-            guide.setText(0, getString(com.kosherphone.jewishcalendar.R.string.softkey_menu))
             guide.setText(1, getString(com.kosherphone.jewishcalendar.R.string.softkey_prev))
             guide.setText(2, getString(com.kosherphone.jewishcalendar.R.string.softkey_next))
-            guide.setText(3, getString(com.kosherphone.jewishcalendar.R.string.softkey_back))
         } catch (e: Exception) {
             // ignore if device doesn't support certain methods
         }
     }
 
     override fun onDpadLeft(): Boolean {
+        // When focus is in the toolbar let the view system navigate between toolbar items
+        val focus = currentFocus
+        if (focus != null && isInsideToolbar(focus)) return false
         val last = currentFragments.lastOrNull()
         if (last is com.kosherphone.jewishcalendar.interfaces.NavigationListener) {
             (last as com.kosherphone.jewishcalendar.interfaces.NavigationListener).goLeft()
@@ -324,6 +367,8 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
     }
 
     override fun onDpadRight(): Boolean {
+        val focus = currentFocus
+        if (focus != null && isInsideToolbar(focus)) return false
         val last = currentFragments.lastOrNull()
         if (last is com.kosherphone.jewishcalendar.interfaces.NavigationListener) {
             (last as com.kosherphone.jewishcalendar.interfaces.NavigationListener).goRight()
@@ -333,9 +378,9 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
     }
 
     override fun onDpadCenter(): Boolean {
-        // prefer activating focused view, otherwise click primary FAB if visible
+        // Click a focused leaf/item view (not a container like RecyclerView), otherwise click FAB
         val focus = currentFocus
-        if (focus is android.view.View && focus.isClickable) {
+        if (focus != null && focus.isClickable && focus !is androidx.recyclerview.widget.RecyclerView) {
             focus.performClick()
             return true
         }
@@ -349,18 +394,30 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
     }
 
     override fun onSoftLeft(): Boolean {
-        // open options/menu
-        openOptionsMenu()
-        return true
+        val focus = currentFocus
+        if (focus != null && isInsideToolbar(focus)) {
+            focus.performClick()
+            return true
+        }
+        return onDpadLeft()
     }
 
     override fun onSoftRight(): Boolean {
-        // behave like back
-        onBackPressedCompat()
+        val focus = currentFocus
+        if (focus != null && isInsideToolbar(focus)) {
+            focus.clearFocus()
+            return true
+        }
+        return onDpadRight()
+    }
+
+    override fun onDpadCenterLongPress(): Boolean {
+        binding.mainMenu.requireToolbar().showOverflowMenu()
         return true
     }
 
     override fun onPause() {
+        window.decorView.viewTreeObserver.removeOnGlobalFocusChangeListener(toolbarFocusListener)
         super.onPause()
         storeStateVariables()
     }

@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_launcher_name">Calendar</string>
+    <string name="app_launcher_name">Jewish Calendar</string>
     <string name="change_view">Change view</string>
     <string name="daily_view">Daily view</string>
     <string name="weekly_view">Weekly view</string>
@@ -239,10 +239,16 @@
     <string name="softkey_save">Save</string>
     <string name="softkey_cancel">Cancel</string>
     <string name="softkey_select">Select</string>
+    <string name="softkey_search">Search</string>
+    <string name="softkey_today">Today</string>
+    <string name="softkey_view">View</string>
+    <string name="softkey_date">Date</string>
+    <string name="softkey_settings">Settings</string>
+    <string name="softkey_filter">Filter</string>
 
     <!-- Jewish Calendar -->
-    <string name="jewish_calendar">לוח עברי</string>
-    <string name="in_israel">בארץ ישראל</string>
+    <string name="jewish_calendar">Jewish Calendar</string>
+    <string name="in_israel">Show for Eretz Yisroel</string>
     <string name="show_jewish_holidays">הצג חגים ומועדים</string>
 
     <!-- CalDAV sync -->

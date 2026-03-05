@@ -136,8 +136,8 @@ class WidgetDateConfigureActivity : SimpleActivity() {
 
     override fun configureSoftkeyGuide(guide: com.kosherphone.jewishcalendar.quirks.kyocera.KYY31SoftkeyGuide) {
         try {
-            guide.setText(0, getString(R.string.softkey_save))
-            guide.setText(3, getString(R.string.softkey_cancel))
+            guide.setText(1, getString(R.string.softkey_save))
+            guide.setText(2, getString(R.string.softkey_cancel))
         } catch (e: Exception) {
             // ignore
         }

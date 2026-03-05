@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_launcher_name">יומן</string>
+    <string name="app_launcher_name">יומן יהודי</string>
     <string name="change_view">שינוי תצוגה</string>
     <string name="daily_view">תצוגה יומית</string>
     <string name="weekly_view">תצוגה שבועית</string>
@@ -272,4 +272,6 @@
     <string name="access_level_confidential">חסוי</string>
     <string name="access_level_public">ציבורי</string>
     <string name="allow_alarms_reminders">עליך לאפשר לאפליקציה לתזמן התראות כדי שהתזכורות יפעלו כראוי.</string>
+    <string name="jewish_calendar">לוח יהודי</string>
+    <string name="in_israel">בארץ ישראל</string>
 </resources>

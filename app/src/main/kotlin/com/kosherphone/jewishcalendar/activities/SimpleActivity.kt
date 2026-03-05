@@ -126,7 +126,19 @@ open class SimpleActivity : BaseSimpleActivity() {
     }
 
     // Softkey guide support (Kyocera KYY31 devices)
-    private var softkeyGuide: com.kosherphone.jewishcalendar.quirks.kyocera.KYY31SoftkeyGuide? = null
+    protected var softkeyGuide: com.kosherphone.jewishcalendar.quirks.kyocera.KYY31SoftkeyGuide? = null
+
+    protected fun updateSoftkeyLabels(left: String, right: String) {
+        try {
+            val guide = softkeyGuide ?: return
+            guide.setText(1, left)
+            guide.setText(2, right)
+            guide.invalidate()
+            android.util.Log.d("SoftkeyTest", "updateSoftkeyLabels: left=$left, right=$right")
+        } catch (e: Exception) {
+            android.util.Log.e("SoftkeyTest", "updateSoftkeyLabels failed", e)
+        }
+    }
 
     /**
      * Hook for activities to configure softkey labels / drawables.
@@ -165,15 +177,28 @@ open class SimpleActivity : BaseSimpleActivity() {
     }
 
     // D-pad and softkey handling for non-touch devices
+    private var dpadCenterLongPressed = false
+
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent): Boolean {
         try {
-            // Log all key events for debugging softkey/dpad issues
             val keyName = android.view.KeyEvent.keyCodeToString(keyCode)
             val focus = currentFocus
             val focusClass = focus?.javaClass?.simpleName ?: "null"
             android.util.Log.d("SoftkeyTest", "onKeyDown: keyCode=$keyCode ($keyName), focus=$focusClass, repeatCount=${event.repeatCount}")
-            
-            // don't intercept typing / text input
+
+            // Softkeys are intercepted even when an EditText has focus (they are not typing keys)
+            when (keyCode) {
+                android.view.KeyEvent.KEYCODE_SOFT_LEFT -> {
+                    android.util.Log.d("SoftkeyTest", "  -> KEYCODE_SOFT_LEFT")
+                    if (onSoftLeft()) return true
+                }
+                android.view.KeyEvent.KEYCODE_SOFT_RIGHT -> {
+                    android.util.Log.d("SoftkeyTest", "  -> KEYCODE_SOFT_RIGHT")
+                    if (onSoftRight()) return true
+                }
+            }
+
+            // All other keys defer to the EditText when it has focus
             if (focus is android.widget.EditText) {
                 android.util.Log.d("SoftkeyTest", "  -> Skipping: EditText has focus")
                 return super.onKeyDown(keyCode, event)
@@ -181,45 +206,48 @@ open class SimpleActivity : BaseSimpleActivity() {
 
             when (keyCode) {
                 android.view.KeyEvent.KEYCODE_DPAD_LEFT -> {
-                    android.util.Log.d("SoftkeyTest", "  -> KEYCODE_DPAD_LEFT handled")
+                    android.util.Log.d("SoftkeyTest", "  -> KEYCODE_DPAD_LEFT")
                     if (onDpadLeft()) return true
                 }
                 android.view.KeyEvent.KEYCODE_DPAD_RIGHT -> {
-                    android.util.Log.d("SoftkeyTest", "  -> KEYCODE_DPAD_RIGHT handled")
+                    android.util.Log.d("SoftkeyTest", "  -> KEYCODE_DPAD_RIGHT")
                     if (onDpadRight()) return true
                 }
                 android.view.KeyEvent.KEYCODE_DPAD_UP -> {
-                    android.util.Log.d("SoftkeyTest", "  -> KEYCODE_DPAD_UP handled")
+                    android.util.Log.d("SoftkeyTest", "  -> KEYCODE_DPAD_UP")
                     if (onDpadUp()) return true
                 }
                 android.view.KeyEvent.KEYCODE_DPAD_DOWN -> {
-                    android.util.Log.d("SoftkeyTest", "  -> KEYCODE_DPAD_DOWN handled")
+                    android.util.Log.d("SoftkeyTest", "  -> KEYCODE_DPAD_DOWN")
                     if (onDpadDown()) return true
                 }
                 android.view.KeyEvent.KEYCODE_DPAD_CENTER, android.view.KeyEvent.KEYCODE_ENTER -> {
-                    android.util.Log.d("SoftkeyTest", "  -> KEYCODE_DPAD_CENTER/ENTER handled")
-                    if (onDpadCenter()) return true
-                }
-                android.view.KeyEvent.KEYCODE_SOFT_LEFT -> {
-                    android.util.Log.d("SoftkeyTest", "  -> KEYCODE_SOFT_LEFT RECEIVED & handled")
-                    if (onSoftLeft()) return true
-                }
-                android.view.KeyEvent.KEYCODE_SOFT_RIGHT -> {
-                    android.util.Log.d("SoftkeyTest", "  -> KEYCODE_SOFT_RIGHT RECEIVED & handled")
-                    if (onSoftRight()) return true
-                }
-                else -> {
-                    // Log unhandled keys too
-                    if (keyCode in 80..87) { // Common physical buttons range
-                        android.util.Log.d("SoftkeyTest", "  -> Unhandled special key: $keyName")
+                    android.util.Log.d("SoftkeyTest", "  -> KEYCODE_DPAD_CENTER/ENTER down")
+                    if (event.repeatCount == 0) {
+                        dpadCenterLongPressed = false
+                        event.startTracking() // enables onKeyLongPress
+                        return true // own the key so long press fires correctly
                     }
                 }
             }
         } catch (e: Exception) {
             android.util.Log.e("SoftkeyTest", "Exception in onKeyDown", e)
-            // ignore
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
+            keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
+            val focus = currentFocus
+            if (focus !is android.widget.EditText && !dpadCenterLongPressed) {
+                android.util.Log.d("SoftkeyTest", "  -> KEYCODE_DPAD_CENTER/ENTER short press")
+                onDpadCenter()
+            }
+            dpadCenterLongPressed = false
+            return true
+        }
+        return super.onKeyUp(keyCode, event)
     }
 
     /**
@@ -230,9 +258,9 @@ open class SimpleActivity : BaseSimpleActivity() {
     protected open fun onDpadUp(): Boolean = false
     protected open fun onDpadDown(): Boolean = false
     protected open fun onDpadCenter(): Boolean {
-        // prefer activating focused view by default
+        // Click a focused item view, but not container views like RecyclerView
         val focus = currentFocus
-        if (focus is android.view.View && focus.isClickable) {
+        if (focus != null && focus.isClickable && focus !is androidx.recyclerview.widget.RecyclerView) {
             focus.performClick()
             return true
         }
@@ -241,4 +269,15 @@ open class SimpleActivity : BaseSimpleActivity() {
 
     protected open fun onSoftLeft(): Boolean = false
     protected open fun onSoftRight(): Boolean = false
+    protected open fun onDpadCenterLongPress(): Boolean = false
+
+    override fun onKeyLongPress(keyCode: Int, event: android.view.KeyEvent): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_DPAD_CENTER ||
+            keyCode == android.view.KeyEvent.KEYCODE_ENTER) {
+            dpadCenterLongPressed = true
+            android.util.Log.d("SoftkeyTest", "  -> KEYCODE_DPAD_CENTER/ENTER long press")
+            if (onDpadCenterLongPress()) return true
+        }
+        return super.onKeyLongPress(keyCode, event)
+    }
 }

@@ -260,10 +260,8 @@ class EventActivity : SimpleActivity() {
     // D-pad / softkey behavior for EventActivity
     override fun configureSoftkeyGuide(guide: com.kosherphone.jewishcalendar.quirks.kyocera.KYY31SoftkeyGuide) {
         try {
-            guide.setText(0, getString(com.kosherphone.jewishcalendar.R.string.softkey_save))
-            guide.setText(1, getString(com.kosherphone.jewishcalendar.R.string.softkey_prev))
-            guide.setText(2, getString(com.kosherphone.jewishcalendar.R.string.softkey_next))
-            guide.setText(3, getString(com.kosherphone.jewishcalendar.R.string.softkey_cancel))
+            guide.setText(1, getString(com.kosherphone.jewishcalendar.R.string.softkey_save))
+            guide.setText(2, getString(com.kosherphone.jewishcalendar.R.string.softkey_cancel))
         } catch (e: Exception) {
             // ignore
         }

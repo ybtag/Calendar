@@ -80,8 +80,8 @@ class ManageCalendarsActivity : SimpleActivity(), DeleteCalendarsListener {
 
     override fun configureSoftkeyGuide(guide: com.kosherphone.jewishcalendar.quirks.kyocera.KYY31SoftkeyGuide) {
         try {
-            guide.setText(0, getString(com.kosherphone.jewishcalendar.R.string.softkey_menu))
-            guide.setText(3, getString(com.kosherphone.jewishcalendar.R.string.softkey_back))
+            guide.setText(1, getString(com.kosherphone.jewishcalendar.R.string.softkey_menu))
+            guide.setText(2, getString(com.kosherphone.jewishcalendar.R.string.softkey_back))
         } catch (e: Exception) {
             // ignore
         }
