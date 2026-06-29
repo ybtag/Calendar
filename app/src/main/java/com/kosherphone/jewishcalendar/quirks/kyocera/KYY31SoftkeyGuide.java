@@ -12,6 +12,15 @@ public class KYY31SoftkeyGuide {
         this.instance = instance;
     }
 
+    public static boolean isSupported() {
+        try {
+            Class.forName("jp.kyocera.kcfp.util.KCfpSoftkeyGuide");
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public static KYY31SoftkeyGuide createFor(Window window) {
         try {
             Class<?> externalClassInstance = Class.forName("jp.kyocera.kcfp.util.KCfpSoftkeyGuide");

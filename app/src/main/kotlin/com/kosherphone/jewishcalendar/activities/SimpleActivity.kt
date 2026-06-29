@@ -126,6 +126,10 @@ open class SimpleActivity : BaseSimpleActivity() {
     }
 
     // Softkey guide support (Kyocera KYY31 devices)
+    protected val hasSoftkeySupport: Boolean by lazy {
+        com.kosherphone.jewishcalendar.quirks.kyocera.KYY31SoftkeyGuide.isSupported()
+    }
+
     protected var softkeyGuide: com.kosherphone.jewishcalendar.quirks.kyocera.KYY31SoftkeyGuide? = null
 
     protected fun updateSoftkeyLabels(left: String, right: String) {

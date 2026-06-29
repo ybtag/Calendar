@@ -17,7 +17,7 @@ class Config(context: Context) : BaseConfig(context) {
     }
 
     var showJewishHolidays: Boolean
-        get() = prefs.getBoolean(SHOW_JEWISH_HOLIDAYS, false)
+        get() = prefs.getBoolean(SHOW_JEWISH_HOLIDAYS, true)
         set(showJewishHolidays) = prefs.edit().putBoolean(SHOW_JEWISH_HOLIDAYS, showJewishHolidays).apply()
     var inIsrael: Boolean
         get() = prefs.getBoolean(IN_ISRAEL, false)

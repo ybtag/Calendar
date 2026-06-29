@@ -41,7 +41,12 @@ object JewishCalendarHelper {
         "\u05DB",                                          // 20
         "\u05DB\u05D0", "\u05DB\u05D1", "\u05DB\u05D2", "\u05DB\u05D3",  // 21-24
         "\u05DB\u05D4", "\u05DB\u05D5", "\u05DB\u05D6", "\u05DB\u05D7", "\u05DB\u05D8",  // 25-29
-        "\u05DC"                                           // 30
+        "\u05DC",                                          // 30
+        "\u05DC\u05D0", "\u05DC\u05D1", "\u05DC\u05D2", "\u05DC\u05D3",  // 31-34
+        "\u05DC\u05D4", "\u05DC\u05D5", "\u05DC\u05D6", "\u05DC\u05D7", "\u05DC\u05D8",  // 35-39
+        "\u05DE",                                          // 40
+        "\u05DE\u05D0", "\u05DE\u05D1", "\u05DE\u05D2", "\u05DE\u05D3",  // 41-44
+        "\u05DE\u05D4", "\u05DE\u05D5", "\u05DE\u05D6", "\u05DE\u05D7", "\u05DE\u05D8"   // 45-49
     )
 
     fun getJewishCalendar(dateTime: DateTime): JewishCalendar {
@@ -70,7 +75,7 @@ object JewishCalendarHelper {
     }
 
     fun getHebrewDayNumber(day: Int): String {
-        return if (day in 1..30) {
+        return if (day in 1..49) {
             HEBREW_NUMERALS[day - 1]
         } else {
             day.toString()

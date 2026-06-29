@@ -182,7 +182,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         )
 
         checkWhatsNewDialog()
-        binding.calendarFab.beVisibleIf(config.storedView != YEARLY_VIEW && config.storedView != WEEKLY_VIEW)
+        showCalendarFabIfAppropriate(config.storedView != YEARLY_VIEW && config.storedView != WEEKLY_VIEW)
         binding.calendarFab.setOnClickListener {
             if (config.allowCreatingTasks) {
                 if (binding.fabExtendedOverlay.isVisible()) {
@@ -302,6 +302,11 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         }
 
         window.decorView.viewTreeObserver.addOnGlobalFocusChangeListener(toolbarFocusListener)
+        window.decorView.postDelayed({
+            if (currentFocus != null && isInsideToolbar(currentFocus!!)) {
+                binding.calendarCoordinator.requestFocus()
+            }
+        }, 100)
     }
 
     // ---- Toolbar focus / softkey label updates ----
@@ -636,7 +641,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         intent.removeExtra(VIEW_TO_OPEN)
         intent.removeExtra(DAY_CODE)
         if (dayCodeToOpen.isNotEmpty()) {
-            binding.calendarFab.beVisible()
+            showCalendarFabIfAppropriate()
             if (viewToOpen != LAST_VIEW) {
                 config.storedView = viewToOpen
             }
@@ -1198,7 +1203,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
     }
 
     private fun updateView(view: Int) {
-        binding.calendarFab.beVisibleIf(view != YEARLY_VIEW && view != WEEKLY_VIEW)
+        showCalendarFabIfAppropriate(view != YEARLY_VIEW && view != WEEKLY_VIEW)
         val dateCode = getDateCodeToDisplay(view)
         config.storedView = view
         checkSwipeRefreshAvailability()
@@ -1285,6 +1290,14 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         else -> dayCode
     }
 
+    private fun showCalendarFabIfAppropriate(show: Boolean = true) {
+        if (hasSoftkeySupport) {
+            binding.calendarFab.beGone()
+        } else {
+            binding.calendarFab.beVisibleIf(show)
+        }
+    }
+
     private fun showExtendedFab() {
         animateFabIcon(false)
         binding.apply {
@@ -1342,7 +1355,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         fragment.arguments = bundle
         supportFragmentManager.beginTransaction().add(R.id.fragments_holder, fragment).commitNow()
         resetActionBarTitle()
-        binding.calendarFab.beVisible()
+        showCalendarFabIfAppropriate()
         showBackNavigationArrow()
     }
 
@@ -1376,7 +1389,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
         fragment.arguments = bundle
         supportFragmentManager.beginTransaction().add(R.id.fragments_holder, fragment).commitNow()
         resetActionBarTitle()
-        binding.calendarFab.beVisible()
+        showCalendarFabIfAppropriate()
         showBackNavigationArrow()
     }
 
@@ -1397,9 +1410,9 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
             refreshEvents()
         }
 
-        binding.calendarFab.beGoneIf(
-            currentFragments.size == 1 &&
-                    (config.storedView == YEARLY_VIEW || config.storedView == WEEKLY_VIEW)
+        showCalendarFabIfAppropriate(
+            !(currentFragments.size == 1 &&
+                    (config.storedView == YEARLY_VIEW || config.storedView == WEEKLY_VIEW))
         )
         if (currentFragments.size > 1) {
             showBackNavigationArrow()
@@ -1684,7 +1697,7 @@ class MainActivity : SimpleActivity(), RefreshRecyclerViewListener {
 
     private fun openDayAt(timestamp: Long) {
         val dayCode = Formatter.getDayCodeFromTS(timestamp / 1000L)
-        binding.calendarFab.beVisible()
+        showCalendarFabIfAppropriate()
         config.storedView = DAILY_VIEW
         updateViewPager(dayCode)
     }
