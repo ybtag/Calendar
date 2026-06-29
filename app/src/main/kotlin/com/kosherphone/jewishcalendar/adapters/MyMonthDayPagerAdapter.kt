@@ -9,7 +9,7 @@ import com.kosherphone.jewishcalendar.fragments.MonthDayFragment
 import com.kosherphone.jewishcalendar.helpers.DAY_CODE
 import com.kosherphone.jewishcalendar.interfaces.NavigationListener
 
-class MyMonthDayPagerAdapter(fm: FragmentManager, private val mCodes: List<String>, private val mListener: NavigationListener) : FragmentStatePagerAdapter(fm) {
+class MyMonthDayPagerAdapter(fm: FragmentManager, private val mCodes: MutableList<String>, private val mListener: NavigationListener) : FragmentStatePagerAdapter(fm) {
     private val mFragments = SparseArray<MonthDayFragment>()
 
     override fun getCount() = mCodes.size
@@ -25,6 +25,11 @@ class MyMonthDayPagerAdapter(fm: FragmentManager, private val mCodes: List<Strin
 
         mFragments.put(position, fragment)
         return fragment
+    }
+
+    fun addCodes(codes: List<String>) {
+        mCodes.addAll(codes)
+        notifyDataSetChanged()
     }
 
     fun updateCalendars(pos: Int) {

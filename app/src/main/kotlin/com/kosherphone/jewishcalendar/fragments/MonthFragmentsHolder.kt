@@ -22,8 +22,11 @@ import org.joda.time.DateTime
 
 class MonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     private val PREFILLED_MONTHS = 251
+    private val PREFETCH_THRESHOLD_MONTHS = 12
+    private val APPENDED_MONTHS = 120
 
     private lateinit var viewPager: MyViewPager
+    private lateinit var monthCodes: MutableList<String>
     private var defaultMonthlyPage = 0
     private var todayDayCode = ""
     private var currentDayCode = ""
@@ -47,9 +50,9 @@ class MonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
     }
 
     private fun setupFragment() {
-        val codes = getMonths(currentDayCode)
-        val monthlyAdapter = MyMonthPagerAdapter(requireActivity().supportFragmentManager, codes, this)
-        defaultMonthlyPage = codes.size / 2
+        monthCodes = getMonths(currentDayCode)
+        val monthlyAdapter = MyMonthPagerAdapter(requireActivity().supportFragmentManager, monthCodes, this)
+        defaultMonthlyPage = monthCodes.size / 2
 
         viewPager.apply {
             adapter = monthlyAdapter
@@ -61,7 +64,8 @@ class MonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
                 }
 
                 override fun onPageSelected(position: Int) {
-                    currentDayCode = codes[position]
+                    currentDayCode = monthCodes[position]
+                    appendFutureMonthsIfNeeded(position)
                     val shouldGoToTodayBeVisible = shouldGoToTodayBeVisible()
                     if (isGoToTodayVisible != shouldGoToTodayBeVisible) {
                         (activity as? MainActivity)?.toggleGoToTodayVisibility(shouldGoToTodayBeVisible)
@@ -73,7 +77,7 @@ class MonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
         }
     }
 
-    private fun getMonths(code: String): List<String> {
+    private fun getMonths(code: String): MutableList<String> {
         val months = ArrayList<String>(PREFILLED_MONTHS)
         val today = Formatter.getDateTimeFromCode(code)
 
@@ -91,6 +95,36 @@ class MonthFragmentsHolder : MyFragmentHolder(), NavigationListener {
 
         // Now add PREFILLED_MONTHS Jewish months
         for (i in 0 until PREFILLED_MONTHS) {
+            val firstDayOfMonth = JewishCalendarHelper.getFirstDayOfJewishMonth(currentJewishYear, currentJewishMonth)
+            months.add(Formatter.getDayCodeFromDateTime(firstDayOfMonth))
+
+            val (nextYear, nextMonth) = JewishCalendarHelper.getNextJewishMonth(currentJewishYear, currentJewishMonth)
+            currentJewishYear = nextYear
+            currentJewishMonth = nextMonth
+        }
+
+        return months
+    }
+
+    private fun appendFutureMonthsIfNeeded(position: Int) {
+        if (position < monthCodes.size - PREFETCH_THRESHOLD_MONTHS) {
+            return
+        }
+
+        val newMonths = getNextMonths(monthCodes.last(), APPENDED_MONTHS)
+        (viewPager.adapter as? MyMonthPagerAdapter)?.addCodes(newMonths)
+    }
+
+    private fun getNextMonths(lastCode: String, count: Int): List<String> {
+        val months = ArrayList<String>(count)
+        val lastDateTime = Formatter.getDateTimeFromCode(lastCode)
+        val jewishCalendar = JewishCalendarHelper.getJewishCalendar(lastDateTime)
+        var (currentJewishYear, currentJewishMonth) = JewishCalendarHelper.getNextJewishMonth(
+            jewishCalendar.jewishYear,
+            jewishCalendar.jewishMonth
+        )
+
+        repeat(count) {
             val firstDayOfMonth = JewishCalendarHelper.getFirstDayOfJewishMonth(currentJewishYear, currentJewishMonth)
             months.add(Formatter.getDayCodeFromDateTime(firstDayOfMonth))
 
